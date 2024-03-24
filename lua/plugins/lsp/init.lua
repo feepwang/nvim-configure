@@ -1,5 +1,9 @@
+local mason = require("plugins/lsp/mason")
+local linter = require("plugins/lsp/linter")
+local formatter = require("plugins/lsp/formatter")
+
 -- list supported languages
-local language_ls = {
+local servers = {
   lua = "lua_ls",
   c = "clangd",
   cpp = "clangd",
@@ -7,10 +11,8 @@ local language_ls = {
   go = "gopls",
   proto = "bufls"
 }
-local mason_ensure_installed = { "lua_ls" }
-local lsp_fts = vim.tbl_keys(language_ls)
-local lsp_handlers = {}
-local lsp_opts = {
+local lsp_fts = vim.tbl_keys(servers)
+local lsp_setups = {
   lua_ls = {
     settings = {
       Lua = {
@@ -52,7 +54,7 @@ local function lsp_attach_keymap(ev)
   --     print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
   -- end, { buffer = ev.buf })
   vim.keymap.set('n', '<leader>f', function()
-    vim.lsp.buf.format { async = true }
+    vim.lsp.buf.format({ async = true })
   end, { buffer = ev.buf, desc = "Format" })
   vim.keymap.set('n', '<leader>D', vim.lsp.buf.type_definition, {
     buffer = ev.buf,
@@ -68,21 +70,12 @@ local function lsp_attach_keymap(ev)
   })
 end
 
-return {
-  {
-    "williamboman/mason.nvim",
-    build = ":MasonUpdate",
-    cmd = { "Mason", "MasonUpdate", "MasonInstall" },
-    opts = {}
-  },
+local plugins = {
   {
     "neovim/nvim-lspconfig",
     dependencies = {
       "hrsh7th/nvim-cmp",
-      {
-        "williamboman/mason-lspconfig.nvim",
-        dependencies = "williamboman/mason.nvim"
-      },
+      "williamboman/mason-lspconfig.nvim",
       {
         "folke/neodev.nvim",
         opts = {}
@@ -157,7 +150,6 @@ return {
         end)
       end
 
-      local servers = lsp_opts
       local has_cmp, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
       local capabilities = vim.tbl_deep_extend(
         "force",
@@ -169,14 +161,14 @@ return {
       local function setup(server)
         local server_opts = vim.tbl_deep_extend("force", {
           capabilities = vim.deepcopy(capabilities),
-        }, servers[server] or {})
+        }, lsp_setups[server] or {})
 
-        if lsp_handlers[server] then
-          if lsp_handlers[server](server, server_opts) then
+        if mason.lsp_handlers[server] then
+          if mason.lsp_handlers[server](server, server_opts) then
             return
           end
-        elseif lsp_handlers["*"] then
-          if lsp_handlers["*"](server, server_opts) then
+        elseif mason.lsp_handlers["*"] then
+          if mason.lsp_handlers["*"](server, server_opts) then
             return
           end
         end
@@ -184,10 +176,10 @@ return {
       end
 
       local ensure_installed = {} ---@type string[]
-      for server, server_opts in pairs(servers) do
+      for server, server_opts in pairs(lsp_setups) do
         if server_opts then
           server_opts = server_opts == true and {} or server_opts
-          if vim.tbl_contains(all_mslp_servers, server) and vim.tbl_contains(mason_ensure_installed, server) then
+          if vim.tbl_contains(all_mslp_servers, server) and vim.tbl_contains(mason.lsp_ensured_list, server) then
             ensure_installed[#ensure_installed + 1] = server
           else
             setup(server)
@@ -211,3 +203,18 @@ return {
     end,
   }
 }
+
+local function arr_concat(...)
+  local result = {}
+  for _, tbl in ipairs({ ... }) do
+    for _, val in ipairs(tbl) do
+      table.insert(result, val)
+    end
+  end
+  return result
+end
+
+return arr_concat(plugins,
+  mason.plugins,
+  linter.plugins,
+  formatter.plugins)
