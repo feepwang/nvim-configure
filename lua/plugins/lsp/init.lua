@@ -11,7 +11,6 @@ local servers = {
   go = "gopls",
   proto = "bufls"
 }
-local lsp_fts = vim.tbl_keys(servers)
 local lsp_setups = {
   lua_ls = {
     settings = {
@@ -81,7 +80,7 @@ local plugins = {
         opts = {}
       },
     },
-    ft = lsp_fts,
+    ft = vim.tbl_keys(servers),
     init = function()
       -- Global mappings.
       -- See `:help vim.diagnostic.*` for documentation on any of the below functions
@@ -175,21 +174,16 @@ local plugins = {
         require("lspconfig")[server].setup(server_opts)
       end
 
-      local ensure_installed = {} ---@type string[]
-      for server, server_opts in pairs(lsp_setups) do
-        if server_opts then
-          server_opts = server_opts == true and {} or server_opts
-          if vim.tbl_contains(all_mslp_servers, server) and vim.tbl_contains(mason.lsp_ensured_list, server) then
-            ensure_installed[#ensure_installed + 1] = server
-          else
-            setup(server)
-          end
+      for _, server in pairs(servers) do
+        if not vim.tbl_contains(mason.lsp_ensured_list, server) and
+            not vim.tbl_contains(mlsp.get_installed_servers(), server) then
+          setup(server)
         end
       end
 
       if have_mason then
         mlsp.setup({
-          ensure_installed = { "lua_ls" },
+          ensure_installed = mason.lsp_ensured_list,
           handlers = { setup }
         })
       end
