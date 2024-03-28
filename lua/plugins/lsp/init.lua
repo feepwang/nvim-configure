@@ -1,6 +1,6 @@
-local mason = require("plugins/lsp/mason")
-local linter = require("plugins/lsp/linter")
-local formatter = require("plugins/lsp/formatter")
+local mason = require("plugins.lsp.mason")
+local linter = require("plugins.lsp.linter")
+local formatter = require("plugins.lsp.formatter")
 
 -- list supported languages
 local servers = {
