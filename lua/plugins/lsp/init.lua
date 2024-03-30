@@ -176,6 +176,7 @@ local plugins = {
 
       for _, server in pairs(servers) do
         if not vim.tbl_contains(mason.lsp_ensured_list, server) and
+            have_mason and
             not vim.tbl_contains(mlsp.get_installed_servers(), server) then
           setup(server)
         end
